@@ -1,5 +1,3 @@
-export var Promise: PromiseConstructor;
-
 export function connect(uri: string, options?: ConnectionOptions, callback?: (err: any) => void): Mongoose;
 export function createConnection(): Connection;
 export function createConnection(uri: string, options?: ConnectionOptions): Connection;
