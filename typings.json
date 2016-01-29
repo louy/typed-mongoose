@@ -1,6 +1,6 @@
 {
-  "name": "merge",
-  "main": "mongoose.d.ts",
+  "name": "mongoose",
+  "main": "index.d.ts",
   "author": "Louay Alakkad <louay@alakkad.me>",
   "version": "4.3.5",
   "ambientDependencies": {
