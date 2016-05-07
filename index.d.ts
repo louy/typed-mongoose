@@ -1,4 +1,4 @@
-declare var Promise: new () => PromiseLike<any>;
+declare let Promise: new (fn: Function) => PromiseLike<any>;
 
 export function connect(uri: string, options?: ConnectionOptions, callback?: (err: any) => void): Mongoose;
 export function createConnection(): Connection;
