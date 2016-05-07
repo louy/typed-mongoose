@@ -3,14 +3,20 @@
   "version": false,
   "private": true,
   "description": "Typescript Typings for Mongoose",
-  "dependencies": {},
+  "dependencies": {
+    "mongoose": "^4.3.5"
+  },
   "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5",
+    "source-map-support": "^0.4.0",
     "typescript": "^1.8.10",
     "typings": "^0.8.1"
   },
   "scripts": {
     "postinstall": "typings install && typings prune",
-    "build": "tsc -p . && typings bundle -o dist"
+    "build": "tsc -p . && typings bundle -o dist",
+    "test": "tsc -p test && mocha"
   },
   "repository": {
     "type": "git",
