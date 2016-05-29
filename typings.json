@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "chai": "registry:npm/chai#3.5.0+20160415060238"
+  },
+  "dependencies": {
+    "mpromise": "registry:npm/mpromise#0.5.5+20160524161901"
   }
 }

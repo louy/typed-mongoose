@@ -1,4 +1,6 @@
-declare let Promise: new (fn: Function) => PromiseLike<any>;
+import * as Promise from 'mpromise';
+
+export {Promise};
 
 export function connect(uri: string, options?: ConnectionOptions, callback?: (err: any) => void): Mongoose;
 export function createConnection(): Connection;
