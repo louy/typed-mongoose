@@ -426,6 +426,8 @@ export interface Document {
   id?: string | number;
   _id: Types.ObjectId;
 
+  _doc?: Document;
+
   equals(doc: Document): boolean;
   get(path: string, type?: new (...args: any[]) => any): any;
   inspect(options?: Object): string;
