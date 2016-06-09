@@ -110,6 +110,98 @@ interface MongosOptions {
 
 export interface Collection {
   drop(callback?: (err: any) => void): Promise<void>;
+  initializeOrderedBulkOp(options?: CollectionOptions): OrderedBulkOperation;
+  initializeUnorderedBulkOp(options?: CollectionOptions): UnorderedBulkOperation;
+}
+
+export interface CollectionOptions {
+  w?: number | string;
+  wtimeout?: number;
+  j?: boolean;
+}
+
+export interface OrderedBulkOperation {
+  length: number;
+  execute(callback: MongoCallback<BulkWriteResult>): void;
+  execute(options?: FSyncOptions): Promise<BulkWriteResult>;
+  execute(options: FSyncOptions, callback: MongoCallback<BulkWriteResult>): void;
+  find(selector: Object): FindOperatorsOrdered;
+  insert(doc: Object): OrderedBulkOperation;
+}
+
+export interface UnorderedBulkOperation {
+  execute(callback: MongoCallback<BulkWriteResult>): void;
+  execute(options?: FSyncOptions): Promise<BulkWriteResult>;
+  execute(options: FSyncOptions, callback: MongoCallback<BulkWriteResult>): void;
+  find(selector: Object): FindOperatorsUnordered;
+  insert(doc: Object): UnorderedBulkOperation;
+}
+
+export interface MongoCallback<T> {
+  (error: MongoError, result: T): void;
+}
+
+export class MongoError extends Error {
+  constructor(message: string);
+
+  static create(options: Object): MongoError;
+}
+
+export interface BulkWriteResult {
+  ok: number;
+  nInserted: number;
+  nUpdated: number;
+  nUpserted: number;
+  nModified: number;
+  nRemoved: number;
+
+  getInsertedIds(): Array<Object>;
+  getLastOp(): Object;
+  getRawResponse(): Object;
+  getUpsertedIdAt(index: number): Object;
+  getUpsertedIds(): Array<Object>;
+  getWriteConcernError(): WriteConcernError;
+  getWriteErrorAt(index: number): WriteError;
+  getWriteErrorCount(): number;
+  getWriteErrors(): Array<Object>;
+  hasWriteErrors(): boolean;
+}
+
+export interface WriteError {
+  code: number;
+  index: number;
+  errmsg: string;
+}
+
+export interface WriteConcernError {
+  code: number;
+  errmsg: string;
+}
+
+export interface FSyncOptions {
+  w?: number | string;
+  wtimeout?: number;
+  j?: boolean;
+  fsync?: boolean
+}
+
+export interface FindOperatorsOrdered {
+  delete(): OrderedBulkOperation;
+  deleteOne(): OrderedBulkOperation;
+  replaceOne(doc: Object): OrderedBulkOperation;
+  update(doc: Object): OrderedBulkOperation;
+  updateOne(doc: Object): OrderedBulkOperation;
+  upsert(): FindOperatorsOrdered;
+}
+
+export interface FindOperatorsUnordered {
+  length: number;
+  remove(): UnorderedBulkOperation;
+  removeOne(): UnorderedBulkOperation;
+  replaceOne(doc: Object): UnorderedBulkOperation;
+  update(doc: Object): UnorderedBulkOperation;
+  updateOne(doc: Object): UnorderedBulkOperation;
+  upsert(): FindOperatorsUnordered;
 }
 
 export class SchemaType { }
