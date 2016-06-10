@@ -110,11 +110,11 @@ interface MongosOptions {
 
 export interface Collection {
   drop(callback?: (err: any) => void): Promise<void>;
-  initializeOrderedBulkOp(options?: CollectionOptions): OrderedBulkOperation;
-  initializeUnorderedBulkOp(options?: CollectionOptions): UnorderedBulkOperation;
+  initializeOrderedBulkOp(options?: BulkOpOptions): OrderedBulkOperation;
+  initializeUnorderedBulkOp(options?: BulkOpOptions): UnorderedBulkOperation;
 }
 
-export interface CollectionOptions {
+export interface BulkOpOptions {
   w?: number | string;
   wtimeout?: number;
   j?: boolean;
