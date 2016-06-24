@@ -241,8 +241,14 @@ export class Schema {
   path(path: string, constructor: any): Schema;
   pathType(path: string): string;
   plugin(plugin: (schema: Schema, options?: Object) => void, options?: Object): Schema;
-  post(method: string, fn: Function): Schema;
-  pre(method: string, callback: Function): Schema;
+  pre(method: string, fn: HookSyncCallback): Schema;
+  pre(method: string, fn: HookSyncCallback, errorCb: HookErrorCallback): Schema;
+  pre(method: string, isAsync: boolean, fn: HookAsyncCallback): Schema;
+  pre(method: string, isAsync: boolean, fn: HookAsyncCallback, errorCb: HookErrorCallback): Schema;
+  post(method: string, fn: HookSyncCallback): Schema;
+  post(method: string, fn: HookSyncCallback, errorCb: HookErrorCallback): Schema;
+  post(method: string, isAsync: boolean, fn: HookAsyncCallback): Schema;
+  post(method: string, isAsync: boolean, fn: HookAsyncCallback, errorCb: HookErrorCallback): Schema;
   requiredPaths(): string[];
   set(key: string, value: any): void;
   static(name: string, fn: Function): Schema;
@@ -251,6 +257,30 @@ export class Schema {
 
   toJSON(): Object;
 }
+
+// hook functions: https://github.com/vkarpov15/hooks-fixed
+export interface HookSyncCallback {
+    (next: HookNextFunction, ...hookArgs:any[]): any;
+}
+
+export interface HookAsyncCallback {
+    (next: HookNextFunction, done: HookDoneFunction, ...hookArgs:any[]): any;
+}
+
+export interface HookErrorCallback {
+    (error: Error): any;
+}
+
+export interface HookNextFunction {
+    (...hookArgs:any[]): any;
+    (error: Error): any;
+}
+
+export interface HookDoneFunction {
+    (...hookArgs:any[]): any;
+    (error: Error): any;
+}
+
 export interface SchemaOption {
   autoIndex?: boolean;
   bufferCommands?: boolean;
