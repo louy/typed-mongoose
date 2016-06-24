@@ -228,6 +228,10 @@ export class Schema {
     OId: Types.ObjectId;
     Mixed: any;
   };
+
+  methods: any;
+  statics: any;
+
   constructor(schema?: Object, options?: Object);
 
   add(obj: Object, prefix?: string): void;
