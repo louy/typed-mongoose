@@ -2,7 +2,7 @@
   "name": "mongoose",
   "main": "index.d.ts",
   "author": "Louay Alakkad <louay@alakkad.me>",
-  "version": "4.3.5",
+  "version": "4.5.4",
   "globalDependencies": {
     "node": "registry:dt/node#4.0.0+20160505172921"
   },

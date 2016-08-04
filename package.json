@@ -4,7 +4,7 @@
   "private": true,
   "description": "Typescript Typings for Mongoose",
   "dependencies": {
-    "mongoose": "^4.3.5"
+    "mongoose": "^4.5.4"
   },
   "devDependencies": {
     "chai": "^3.5.0",
