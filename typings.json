@@ -3,16 +3,17 @@
   "main": "index.d.ts",
   "author": "Louay Alakkad <louay@alakkad.me>",
   "version": "4.3.5",
-  "ambientDependencies": {
+  "globalDependencies": {
     "node": "registry:dt/node#4.0.0+20160505172921"
   },
-  "ambientDevDependencies": {
+  "globalDevDependencies": {
     "mocha": "registry:dt/mocha#2.2.5+20160317120654"
   },
   "devDependencies": {
     "chai": "registry:npm/chai#3.5.0+20160415060238"
   },
   "dependencies": {
+    "mongodb": "registry:npm/mongodb#2.1.0+20160721204323",
     "mpromise": "registry:npm/mpromise#0.5.5+20160524161901"
   }
 }
