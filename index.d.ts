@@ -68,10 +68,10 @@ declare class mongoose {
   static CastError: typeof _mongoose.CastError;
   static Collection: _mongoose.Collection;
   static Connection: typeof _mongoose.Connection;
-  static Document: typeof _mongoose.Document;
+  static Document: new() => _mongoose.Document;
   static DocumentProvider: any;
   static Error: typeof _mongoose.Error;
-  static Model: _mongoose.ModelConstructor<{}>;
+  static Model: new() => _mongoose.Model<any>;
   static Mongoose: {
     // recursive constructor
     new(...args: any[]): typeof mongoose;
@@ -87,17 +87,17 @@ declare class mongoose {
    */
   static Promise: any;
   static PromiseProvider: any;
-  static Query: typeof _mongoose.ModelQuery;
+  static Query: new <T, ModelType extends _mongoose.Document> () => _mongoose.ModelQuery<T, ModelType>;
   static Schema: typeof _mongoose.Schema;
   static SchemaType: typeof _mongoose.SchemaType;
   static SchemaTypes: typeof _mongoose.Schema.Types;
   static Types: {
-    Subdocument: typeof _mongoose.Types.Subdocument;
+    Subdocument: new () => _mongoose.Types.Subdocument;
     Array: typeof _mongoose.Types.Array;
     DocumentArray: typeof _mongoose.Types.DocumentArray;
     Buffer: typeof _mongoose.Types.Buffer;
     ObjectId: typeof _mongoose.Types.ObjectId;
-    Embedded: typeof _mongoose.Types.Embedded;
+    Embedded: new () => _mongoose.Types.Embedded;
   }
   static VirtualType: typeof _mongoose.VirtualType;
 
@@ -162,10 +162,10 @@ declare class mongoose {
    * @param collection (optional, induced from model name)
    * @param skipInit whether to skip initialization (defaults to false)
    */
-  static model<T>(name: string, schema?: _mongoose.Schema, collection?: string,
-    skipInit?: boolean): _mongoose.ModelConstructor<T>;
-  static model<T, Statics>(name: string, schema?: _mongoose.Schema, collection?: string,
-    skipInit?: boolean): Statics & _mongoose.ModelConstructor<T>;
+  static model<T extends _mongoose.Document>(name: string, schema?: _mongoose.Schema, collection?: string,
+    skipInit?: boolean): _mongoose.Model<T>;
+  static model<T extends _mongoose.Document, Statics>(name: string, schema?: _mongoose.Schema, collection?: string,
+    skipInit?: boolean): Statics & _mongoose.Model<T>;
 
   /**
    * Returns an array of model names created on this instance of Mongoose.
@@ -195,15 +195,13 @@ declare namespace mongoose {
   type Error = _mongoose.Error;
   type ValidationError = _mongoose.ValidationError;
 
-  /** Document created from model constructors. */
-  type model<T> = _mongoose.Model<T>;
-  /** Model Constructor. */
-  type Model<T> = _mongoose.ModelConstructor<T>;
+  /** Model (Document constructor). */
+  type Model<T extends Document> = _mongoose.Model<T>;
 
   type Mongoose = typeof mongoose;
   type Promise<T> = _mongoose._MongoosePromise<T>;
   type Query<T> = _mongoose.Query<T>;
-  type QueryCursor<T> = _mongoose.QueryCursor<T>;
+  type QueryCursor<T extends Document> = _mongoose.QueryCursor<T>;
   type QueryStream = _mongoose.QueryStream;
   type Schema = _mongoose.Schema;
   namespace Schema {
@@ -388,8 +386,8 @@ declare namespace _mongoose {
      * @param collection name of mongodb collection (optional) if not given it will be induced from model name
      * @returns The compiled model
      */
-    model<T>(name: string, schema?: Schema, collection?: string): ModelConstructor<T>;
-    model<T, Statics>(name: string, schema?: Schema, collection?: string): Statics & ModelConstructor<T>;
+    model<T extends Document>(name: string, schema?: Schema, collection?: string): Model<T>;
+    model<T extends Document, Statics>(name: string, schema?: Schema, collection?: string): Statics & Model<T>;
 
     /** Returns an array of model names created on this connection. */
     modelNames(): string[];
@@ -529,7 +527,7 @@ declare namespace _mongoose {
    * QueryCursor can only be accessed by query#cursor(), we only
    *   expose its interface to enable type-checking.
    */
-  interface QueryCursor<T> extends stream.Readable {
+  interface QueryCursor<T extends Document> extends stream.Readable {
     /**
      * A QueryCursor is a concurrency primitive for processing query results
      * one document at a time. A QueryCursor fulfills the Node.js streams3 API,
@@ -554,7 +552,7 @@ declare namespace _mongoose {
      * Returns a promise that resolves when done.
      * @param callback executed when all docs have been processed
      */
-    eachAsync(fn: (doc: Model<T>) => any, callback?: (err: any) => void): _MongoosePromise<Model<T>>;
+    eachAsync(fn: (doc: T) => any, callback?: (err: any) => void): _MongoosePromise<T>;
 
     /**
      * Get the next document from this cursor. Will return null when there are
@@ -657,8 +655,8 @@ declare namespace _mongoose {
      * @param method name of the method to hook
      * @param fn callback
      */
-    post<T>(method: string, fn: (doc: Model<T>) => void, ...args: any[]): this;
-    post<T>(method: string, fn: (doc: Model<T>, next: (err?: NativeError) => void,
+    post<T extends Document>(method: string, fn: (doc: Model<T>) => void, ...args: any[]): this;
+    post<T extends Document>(method: string, fn: (doc: Model<T>, next: (err?: NativeError) => void,
       ...otherArgs: any[]) => void): this;
 
     /**
@@ -794,7 +792,7 @@ declare namespace _mongoose {
    * section document.js
    * http://mongoosejs.com/docs/api.html#document-js
    */
-  class Document {
+  interface Document {
     /** Checks if a path is set to its default. */
     $isDefault(path?: string): boolean;
 
@@ -957,6 +955,47 @@ declare namespace _mongoose {
     isNew: boolean;
     /** The documents schema. */
     schema: Schema;
+
+    /** Signal that we desire an increment of this documents version. */
+    increment(): this;
+
+    /**
+     * Returns another Model instance.
+     * @param name model name
+     */
+    model<T extends Document>(name: string): Model<T>;
+    model<T extends Document, Statics>(name: string): Statics & Model<T>;
+
+    /**
+     * Removes this document from the db.
+     * @param fn optional callback
+     */
+    remove(fn?: (err: any, product: this) => void): _MongoosePromise<this>;
+
+    /**
+     * Saves this document.
+     * @param options options optional options
+     * @param options.safe overrides schema's safe option
+     * @param options.validateBeforeSave set to false to save without validating.
+     * @param fn optional callback
+     */
+    save(fn?: (err: any, product: this, numAffected: number) => void): _MongoosePromise<this>;
+
+    /** Base Mongoose instance the model uses. */
+    base: typeof mongoose;
+    /**
+     * If this is a discriminator model, baseModelName is the
+     * name of the base model.
+     */
+    baseModelName: String;
+    /** Collection the model uses. */
+    collection: Collection;
+    /** Connection the model uses. */
+    db: Connection;
+    /** Registered discriminators for this model. */
+    discriminators: any;
+    /** The name of the model */
+    modelName: string;
   }
 
   interface DocumentToObjectOptions {
@@ -990,7 +1029,7 @@ declare namespace _mongoose {
      * section types/subdocument.js
      * http://mongoosejs.com/docs/api.html#types-subdocument-js
      */
-    class Subdocument extends Document {
+    interface Subdocument extends Document {
       /** Returns the top level document of this sub-document. */
       ownerDocument(): Document;
 
@@ -998,8 +1037,9 @@ declare namespace _mongoose {
        * Null-out this subdoc
        * @param callback optional callback for compatibility with Document.prototype.remove
        */
-      remove(callback?: (err: any) => void): void;
-      remove(options: Object, callback?: (err: any) => void): void;
+      // FIXME - this doesn't work
+      // remove(callback?: (err: any) => void): void;
+      // remove(options: Object, callback?: (err: any) => void): void;
     }
 
     /*
@@ -1175,7 +1215,7 @@ declare namespace _mongoose {
      * section types/embedded.js
      * http://mongoosejs.com/docs/api.html#types-embedded-js
      */
-    class Embedded extends Document {
+    interface Embedded extends Document {
       /** Helper for console.log */
       inspect(): Object;
 
@@ -1194,9 +1234,10 @@ declare namespace _mongoose {
       parentArray(): DocumentArray<Document>;
 
       /** Removes the subdocument from its parent array. */
-      remove(options?: {
-        noop?: boolean;
-      }, fn?: (err: any) => void): this;
+      // FIXME - this doesn't work
+      // remove(options?: {
+      //   noop?: boolean;
+      // }, fn?: (err: any) => void): this;
 
       /**
        * Marks the embedded doc modified.
@@ -1210,13 +1251,13 @@ declare namespace _mongoose {
    * section query.js
    * http://mongoosejs.com/docs/api.html#query-js
    */
-  type Query<T> = ModelQuery<T, any>;
+  interface Query<T> extends ModelQuery<T, any> {}
 
   /*
    * Query.find() will return Query<Model<T>[]> however we need the
    * type T to create this so we save T in another parameter.
    */
-  class ModelQuery<T, ModelType> extends mquery {
+  interface ModelQuery<T, ModelType extends Document> extends mquery {
     /**
      * Specifies a javascript function or expression to pass to MongoDBs query system.
      * Only use $where when you have a condition that cannot be met using other MongoDB
@@ -1249,7 +1290,7 @@ declare namespace _mongoose {
     box(lower: number[], upper: number[]): this;
 
     /** Casts this query to the schema of model, If obj is present, it is cast instead of this query.*/
-    cast(model: Model<any> | ModelConstructor<any>, obj?: Object): Object;
+    cast(model: Document | Model<any>, obj?: Object): Object;
 
     /**
      * Executes the query returning a Promise which will be
@@ -1291,7 +1332,7 @@ declare namespace _mongoose {
      * Returns a wrapper around a mongodb driver cursor. A Query<T>Cursor exposes a
      * Streams3-compatible interface, as well as a .next() function.
      */
-    cursor(options?: Object): QueryCursor<T>;
+    cursor(options?: Object): QueryCursor<ModelType>;
 
     /** Declares or executes a distict() operation. Passing a callback executes the query. */
     distinct(callback?: (err: any, res: any[]) => void): Query<any[]>;
@@ -1510,7 +1551,7 @@ declare namespace _mongoose {
      * @param match Conditions for the population query
      * @param options Options for the population query (sort, etc)
      */
-    populate(path: string | Object, select?: string | Object, model?: string | Model<T>,
+    populate(path: string | Object, select?: string | Object, model?: string | Model<ModelType>,
       match?: Object, options?: Object): this;
     populate(options: ModelPopulateOptions): this;
 
@@ -1534,11 +1575,12 @@ declare namespace _mongoose {
      * you must first call remove() and then execute it by using the exec() method.
      * @param criteria mongodb selector
      */
-    remove(callback?: (err: any) => void): Query<void>;
-    remove(criteria: Object | Query<any>, callback?: (err: any) => void): Query<void>;
+    remove(callback?: (err: any) => void): this;
+    remove(criteria: Object | Query<any>, callback?: (err: any) => void): this;
 
     /** Specifies which document fields to include or exclude (also known as the query "projection") */
     select(arg: string | Object): this;
+    select<T>(arg: string | Object): ModelQuery<T, ModelType>;
     /** Determines if field selection has been made. */
     selected(): boolean;
     /** Determines if exclusive field selection has been made.*/
@@ -1607,7 +1649,7 @@ declare namespace _mongoose {
      * Converts this query to a customized, reusable query
      * constructor with all arguments and options retained.
      */
-    toConstructor(): typeof ModelQuery;
+    toConstructor(): new () => ModelQuery<T, ModelType>;
 
     /**
      * Declare and/or execute this query as an update() operation.
@@ -1629,7 +1671,7 @@ declare namespace _mongoose {
     within(coordinate: number[], ...coordinatePairs: number[][]): this;
 
     /** Flag to opt out of using $geoWithin. */
-    static use$geoWithin: boolean;
+    // static use$geoWithin: boolean;
   }
 
   // https://github.com/aheckmann/mquery
@@ -2118,10 +2160,8 @@ declare namespace _mongoose {
    * they actual return an instance of the Model constructor (think of it
    * like a new class) which can then instantiate its own objects.
    */
-  type ModelConstructor<T> = IModelConstructor<T> & events.EventEmitter;
-  type Model<T> = T & _Model<T> & events.EventEmitter;
 
-  interface IModelConstructor<T> {
+  interface Model<T extends Document> extends events.EventEmitter {
     /**
      * Model constructor
      * Provides the interface to MongoDB collections as well as creates document instances.
@@ -2138,7 +2178,7 @@ declare namespace _mongoose {
      *   Model#ensureIndexes. If an error occurred it is passed with the event.
      *   The fields, options, and index name are also passed.
      */
-    new(doc?: Object): Model<T>;
+    new(doc?: Object): T;
 
     /**
      * Finds a single document by its _id field. findById(id) is almost*
@@ -2147,20 +2187,20 @@ declare namespace _mongoose {
      * @param projection optional fields to return
      */
     findById(id: Object | string | number,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findById(id: Object | string | number, projection: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findById(id: Object | string | number, projection: Object, options: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
 
-    model<T>(name: string): ModelConstructor<T>;
-    model<T, Statics>(name: string): Statics & ModelConstructor<T>;
+    model<T extends Document>(name: string): Model<T>;
+    model<T extends Document, Statics>(name: string): Statics & Model<T>;
 
     /**
      * Creates a Query and specifies a $where condition.
      * @param argument is a javascript string or anonymous function
      */
-    $where(argument: string | Function): ModelQuery<Model<T>[], T>;
+    $where(argument: string | Function): ModelQuery<T[], T>;
 
     /**
      * Performs aggregations on the models collection.
@@ -2179,16 +2219,15 @@ declare namespace _mongoose {
      * does new MyModel(doc).save() for every doc in docs.
      * Triggers the save() hook.
      */
-    create(docs: any[], callback?: (err: any, res: Model<T>[]) => void): _MongoosePromise<Model<T>[]>;
-    create(...docs: Object[]): _MongoosePromise<Model<T>>;
-    create(...docsWithCallback: Object[]): _MongoosePromise<Model<T>>;
+    create(doc: Object, callback?: (err: any, res: T[]) => void): _MongoosePromise<T>;
+    create(docs: Object[], callback?: (err: any, res: T[]) => void): _MongoosePromise<T[]>;
 
     /**
      * Adds a discriminator type.
      * @param name discriminator model name
      * @param schema discriminator model schema
      */
-    discriminator(name: string, schema: Schema): Model<T>;
+    discriminator(name: string, schema: Schema): T;
 
     /** Creates a Query for a distinct operation. Passing a callback immediately executes the query. */
     distinct(field: string, callback?: (err: any, res: any[]) => void): Query<any[]>;
@@ -2207,12 +2246,12 @@ declare namespace _mongoose {
      * Finds documents.
      * @param projection optional fields to return
      */
-    find(callback?: (err: any, res: Model<T>[]) => void): ModelQuery<Model<T>[], T>;
-    find(conditions: Object, callback?: (err: any, res: Model<T>[]) => void): ModelQuery<Model<T>[], T>;
+    find(callback?: (err: any, res: T[]) => void): ModelQuery<T[], T>;
+    find(conditions: Object, callback?: (err: any, res: T[]) => void): ModelQuery<T[], T>;
     find(conditions: Object, projection: Object,
-      callback?: (err: any, res: Model<T>[]) => void): ModelQuery<Model<T>[], T>;
+      callback?: (err: any, res: T[]) => void): ModelQuery<T[], T>;
     find(conditions: Object, projection: Object, options: Object,
-      callback?: (err: any, res: Model<T>[]) => void): ModelQuery<Model<T>[], T>;
+      callback?: (err: any, res: T[]) => void): ModelQuery<T[], T>;
 
 
 
@@ -2223,27 +2262,27 @@ declare namespace _mongoose {
      * Executes immediately if callback is passed, else a Query object is returned.
      * @param id value of _id to query by
      */
-    findByIdAndRemove(): ModelQuery<Model<T>, T>;
+    findByIdAndRemove(): ModelQuery<T, T>;
     findByIdAndRemove(id: Object | number | string,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findByIdAndRemove(id: Object | number | string, options: {
       /** if multiple docs are found by the conditions, sets the sort order to choose which doc to update */
       sort?: Object;
       /** sets the document fields to return */
       select?: Object;
-    }, callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+    }, callback?: (err: any, res: T) => void): ModelQuery<T, T>;
 
     /**
      * Issues a mongodb findAndModify update command by a document's _id field. findByIdAndUpdate(id, ...)
      * is equivalent to findOneAndUpdate({ _id: id }, ...).
      * @param id value of _id to query by
      */
-    findByIdAndUpdate(): ModelQuery<Model<T>, T>;
+    findByIdAndUpdate(): ModelQuery<T, T>;
     findByIdAndUpdate(id: Object | number | string, update: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findByIdAndUpdate(id: Object | number | string, update: Object,
       options: ModelFindByIdAndUpdateOptions,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
 
     /**
      * Finds one document.
@@ -2251,20 +2290,20 @@ declare namespace _mongoose {
      * @param projection optional fields to return
      */
     findOne(conditions?: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findOne(conditions: Object, projection: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findOne(conditions: Object, projection: Object, options: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
 
     /**
      * Issue a mongodb findAndModify remove command.
      * Finds a matching document, removes it, passing the found document (if any) to the callback.
      * Executes immediately if callback is passed else a Query object is returned.
      */
-    findOneAndRemove(): ModelQuery<Model<T>, T>;
+    findOneAndRemove(): ModelQuery<T, T>;
     findOneAndRemove(conditions: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findOneAndRemove(conditions: Object, options: {
       /**
        * if multiple docs are found by the conditions, sets the sort order to choose
@@ -2275,7 +2314,7 @@ declare namespace _mongoose {
       maxTimeMS?: number;
       /** sets the document fields to return */
       select?: Object;
-    }, callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+    }, callback?: (err: any, res: T) => void): ModelQuery<T, T>;
 
     /**
      * Issues a mongodb findAndModify update command.
@@ -2283,12 +2322,12 @@ declare namespace _mongoose {
      * and returns the found document (if any) to the callback. The query executes immediately
      * if callback is passed else a Query object is returned.
      */
-    findOneAndUpdate(): ModelQuery<Model<T>, T>;
+    findOneAndUpdate(): ModelQuery<T, T>;
     findOneAndUpdate(conditions: Object, update: Object,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
     findOneAndUpdate(conditions: Object, update: Object,
       options: ModelFindOneAndUpdateOptions,
-      callback?: (err: any, res: Model<T>) => void): ModelQuery<Model<T>, T>;
+      callback?: (err: any, res: T) => void): ModelQuery<T, T>;
 
     /**
      * geoNear support for Mongoose
@@ -2303,7 +2342,7 @@ declare namespace _mongoose {
       /** return the raw object */
       lean?: boolean;
       [other: string]: any;
-    }, callback?: (err: any, res: Model<T>[], stats: any) => void): ModelQuery<Model<T>[], T>;
+    }, callback?: (err: any, res: T[], stats: any) => void): ModelQuery<T[], T>;
 
     /**
      * Implements $geoSearch functionality for Mongoose
@@ -2320,14 +2359,14 @@ declare namespace _mongoose {
       limit?: number;
       /** return the raw object instead of the Mongoose Model */
       lean?: boolean;
-    }, callback?: (err: any, res: Model<T>[]) => void): ModelQuery<Model<T>[], T>;
+    }, callback?: (err: any, res: T[]) => void): ModelQuery<T[], T>;
 
     /**
      * Shortcut for creating a new Document from existing raw data,
      * pre-saved in the DB. The document returned has no paths marked
      * as modified initially.
      */
-    hydrate(obj: Object): Model<T>;
+    hydrate(obj: Object): T;
 
     /**
      * Shortcut for validating an array of documents and inserting them into
@@ -2336,9 +2375,9 @@ declare namespace _mongoose {
      * document.
      * This function does not trigger save middleware.
      */
-    insertMany(docs: any[], callback?: (error: any, docs: Model<T>[]) => void): _MongoosePromise<Model<T>[]>;
-    insertMany(doc: any, callback?: (error: any, doc: Model<T>) => void): _MongoosePromise<Model<T>>;
-    insertMany(...docsWithCallback: Object[]): _MongoosePromise<Model<T>>;
+    insertMany(docs: any[], callback?: (error: any, docs: T[]) => void): _MongoosePromise<T[]>;
+    insertMany(doc: any, callback?: (error: any, doc: T) => void): _MongoosePromise<T>;
+    insertMany(...docsWithCallback: Object[]): _MongoosePromise<T>;
 
     /**
      * Executes a mapReduce command.
@@ -2346,7 +2385,7 @@ declare namespace _mongoose {
      * @param callbackoptional callback
      */
     mapReduce<Key, Value>(
-      o: ModelMapReduceOption<Model<T>, Key, Value>,
+      o: ModelMapReduceOption<T, Key, Value>,
       callback?: (err: any, res: any) => void
     ): _MongoosePromise<any>;
 
@@ -2357,9 +2396,9 @@ declare namespace _mongoose {
      * @param callback Optional callback, executed upon completion. Receives err and the doc(s).
      */
     populate(docs: Object[], options: ModelPopulateOptions | ModelPopulateOptions[],
-      callback?: (err: any, res: Model<T>[]) => void): _MongoosePromise<Model<T>[]>;
+      callback?: (err: any, res: T[]) => void): _MongoosePromise<T[]>;
     populate<T>(docs: Object, options: ModelPopulateOptions | ModelPopulateOptions[],
-      callback?: (err: any, res: Model<T>) => void): _MongoosePromise<Model<T>>;
+      callback?: (err: any, res: T) => void): _MongoosePromise<T>;
 
     /** Removes documents from the collection. */
     remove(conditions: Object, callback?: (err: any) => void): Query<void>;
@@ -2375,51 +2414,9 @@ declare namespace _mongoose {
 
     /** Creates a Query, applies the passed conditions, and returns the Query. */
     where(path: string, val?: Object): Query<any>;
-  }
 
-  class _Model<T> extends Document {
-    /** Signal that we desire an increment of this documents version. */
-    increment(): this;
-
-    /**
-     * Returns another Model instance.
-     * @param name model name
-     */
-    model<T>(name: string): ModelConstructor<T>;
-    model<T, Statics>(name: string): Statics & ModelConstructor<T>;
-
-    /**
-     * Removes this document from the db.
-     * @param fn optional callback
-     */
-    remove(fn?: (err: any, product: Model<T>) => void): _MongoosePromise<Model<T>>;
-
-    /**
-     * Saves this document.
-     * @param options options optional options
-     * @param options.safe overrides schema's safe option
-     * @param options.validateBeforeSave set to false to save without validating.
-     * @param fn optional callback
-     */
-    save(fn?: (err: any, product: Model<T>, numAffected: number) => void): _MongoosePromise<Model<T>>;
-
-    /** Base Mongoose instance the model uses. */
-    base: typeof mongoose;
-    /**
-     * If this is a discriminator model, baseModelName is the
-     * name of the base model.
-     */
-    baseModelName: String;
     /** Collection the model uses. */
     collection: Collection;
-    /** Connection the model uses. */
-    db: Connection;
-    /** Registered discriminators for this model. */
-    discriminators: any;
-    /** The name of the model */
-    modelName: string;
-    /** Schema the model uses. */
-    schema: Schema;
   }
 
   interface ModelFindByIdAndUpdateOptions {
