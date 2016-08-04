@@ -2442,6 +2442,8 @@ declare namespace _mongoose {
     sort?: Object;
     /** sets the document fields to return */
     select?: Object;
+
+    collection: Collection;
   }
 
   interface ModelFindOneAndUpdateOptions extends ModelFindByIdAndUpdateOptions {
