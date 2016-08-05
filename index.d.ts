@@ -792,7 +792,7 @@ declare namespace _mongoose {
    * section document.js
    * http://mongoosejs.com/docs/api.html#document-js
    */
-  interface Document {
+  interface Document extends events.EventEmitter {
     /** Checks if a path is set to its default. */
     $isDefault(path?: string): boolean;
 
@@ -1011,7 +1011,7 @@ declare namespace _mongoose {
      * @param ret The plain object representation which has been converted
      * @param options The options in use (either schema options or the options passed inline)
      */
-    transform?: (doc: Model<any>, ret: Object, options: Object) => any;
+    transform?: (doc: Document, ret: Object, options: Object) => any;
     /** depopulate any populated paths, replacing them with their original refs (defaults to false) */
     depopulate?: boolean;
     /** whether to include the version key (defaults to true) */
@@ -1038,8 +1038,8 @@ declare namespace _mongoose {
        * @param callback optional callback for compatibility with Document.prototype.remove
        */
       // FIXME - this doesn't work
-      // remove(callback?: (err: any) => void): void;
-      // remove(options: Object, callback?: (err: any) => void): void;
+      remove(callback?: (err: any) => void): void;
+      remove(options: Object, callback?: (err: any) => void): void;
     }
 
     /*
@@ -1362,9 +1362,9 @@ declare namespace _mongoose {
      * query is executed, the result will be an array of documents.
      * @param criteria mongodb selector
      */
-    find(callback?: (err: any, res: Model<ModelType>[]) => void): ModelQuery<Model<ModelType>[], ModelType>;
+    find(callback?: (err: any, res: ModelType[]) => void): ModelQuery<ModelType[], ModelType>;
     find(criteria: Object,
-      callback?: (err: any, res: Model<ModelType>[]) => void): ModelQuery<Model<ModelType>[], ModelType>;
+      callback?: (err: any, res: ModelType[]) => void): ModelQuery<ModelType[], ModelType>;
 
     /**
      * Declares the query a findOne operation. When executed, the first found document is
@@ -1373,33 +1373,33 @@ declare namespace _mongoose {
      * @param criteria mongodb selector
      * @param projection optional fields to return
      */
-    findOne(callback?: (err: any, res: Model<ModelType>) => void): ModelQuery<Model<ModelType>, ModelType>;
+    findOne(callback?: (err: any, res: ModelType) => void): ModelQuery<ModelType, ModelType>;
     findOne(criteria: Object,
-      callback?: (err: any, res: Model<ModelType>) => void): ModelQuery<Model<ModelType>, ModelType>;
+      callback?: (err: any, res: ModelType) => void): ModelQuery<ModelType, ModelType>;
 
     /**
      * Issues a mongodb findAndModify remove command.
      * Finds a matching document, removes it, passing the found document (if any) to the
      * callback. Executes immediately if callback is passed.
      */
-    findOneAndRemove(callback?: (error: any, doc: Model<ModelType>, result: any) => void): ModelQuery<Model<ModelType>, ModelType>;
+    findOneAndRemove(callback?: (error: any, doc: ModelType, result: any) => void): ModelQuery<ModelType, ModelType>;
     findOneAndRemove(conditions: Object,
-      callback?: (error: any, doc: Model<ModelType>, result: any) => void): ModelQuery<Model<ModelType>, ModelType>;
+      callback?: (error: any, doc: ModelType, result: any) => void): ModelQuery<ModelType, ModelType>;
     findOneAndRemove(conditions: Object, options: QueryFindOneAndRemoveOptions,
-      callback?: (error: any, doc: Model<ModelType>, result: any) => void): ModelQuery<Model<ModelType>, ModelType>;
+      callback?: (error: any, doc: ModelType, result: any) => void): ModelQuery<ModelType, ModelType>;
 
     /**
      * Issues a mongodb findAndModify update command.
      * Finds a matching document, updates it according to the update arg, passing any options, and returns
      * the found document (if any) to the callback. The query executes immediately if callback is passed.
      */
-    findOneAndUpdate(callback?: (err: any, doc: Model<ModelType>) => void): ModelQuery<Model<ModelType>, ModelType>;
+    findOneAndUpdate(callback?: (err: any, doc: ModelType) => void): ModelQuery<ModelType, ModelType>;
     findOneAndUpdate(update: Object,
-      callback?: (err: any, doc: Model<ModelType>) => void): ModelQuery<Model<ModelType>, ModelType>;
+      callback?: (err: any, doc: ModelType) => void): ModelQuery<ModelType, ModelType>;
     findOneAndUpdate(query: Object | Query<any>, update: Object,
-      callback?: (err: any, doc: Model<ModelType>) => void): ModelQuery<Model<ModelType>, ModelType>;
+      callback?: (err: any, doc: ModelType) => void): ModelQuery<ModelType, ModelType>;
     findOneAndUpdate(query: Object | Query<any>, update: Object, options: QueryFindOneAndUpdateOptions,
-      callback?: (err: any, doc: Model<ModelType>) => void): ModelQuery<Model<ModelType>, ModelType>;
+      callback?: (err: any, doc: ModelType) => void): ModelQuery<ModelType, ModelType>;
 
     /**
      * Specifies a $geometry condition. geometry() must come after either intersects() or within().
@@ -1551,7 +1551,7 @@ declare namespace _mongoose {
      * @param match Conditions for the population query
      * @param options Options for the population query (sort, etc)
      */
-    populate(path: string | Object, select?: string | Object, model?: string | Model<ModelType>,
+    populate(path: string | Object, select?: string | Object, model?: string | ModelType,
       match?: Object, options?: Object): this;
     populate(options: ModelPopulateOptions): this;
 
@@ -2019,7 +2019,7 @@ declare namespace _mongoose {
      * Binds this aggregate to a model.
      * @param model the model to which the aggregate is to be bound
      */
-    model(model: Model<any>): this;
+    model(model: Document): this;
 
     /**
      * Appends a new $geoNear operator to this aggregate pipeline.
@@ -2221,6 +2221,7 @@ declare namespace _mongoose {
      */
     create(doc: Object, callback?: (err: any, res: T[]) => void): _MongoosePromise<T>;
     create(docs: Object[], callback?: (err: any, res: T[]) => void): _MongoosePromise<T[]>;
+    create(...docsOrCb: Object[]): _MongoosePromise<T[]>;
 
     /**
      * Adds a discriminator type.
@@ -2439,8 +2440,6 @@ declare namespace _mongoose {
     sort?: Object;
     /** sets the document fields to return */
     select?: Object;
-
-    collection: Collection;
   }
 
   interface ModelFindOneAndUpdateOptions extends ModelFindByIdAndUpdateOptions {
