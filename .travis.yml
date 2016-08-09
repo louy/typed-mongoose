@@ -2,6 +2,6 @@ language: node_js
 services:
 - mongodb
 node_js:
-- '6.1'
+- stable
 script:
 - npm run build && npm test
